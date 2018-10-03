@@ -5,6 +5,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+pridictAttri="OnlineBugNum"
 def anova(frame, qualitative):
     anv = pd.DataFrame()
     anv['feature'] = qualitative
@@ -14,7 +15,7 @@ def anova(frame, qualitative):
         #print(frame[c].unique())
         samples = []
         for cls in frame[c].unique():
-            s = frame[frame[c] == cls]['Price'].values
+            s = frame[frame[c] == cls][pridictAttri].values
             samples.append(s)  # 某特征下不同取值对应的房价组合形成二维列表
         pval = stats.f_oneway(*samples)[1]  # 一元方差分析得到 F，P，要的是 P，P越小，对方差的影响越大。
         pvals.append(pval)
@@ -31,7 +32,7 @@ def encode(frame, feature):
     ordering = pd.DataFrame()
     ordering['val'] = frame[feature].unique()
     ordering.index = ordering.val
-    ordering['price_mean'] = frame[[feature, 'Price']].groupby(feature).mean()['Price']
+    ordering['price_mean'] = frame[[feature, pridictAttri]].groupby(feature).mean()[pridictAttri]
     # 上述 groupby()操作可以将某一feature下同一取值的数据整个到一起，结合mean()可以直接得到该特征不同取值的房价均值
     ordering = ordering.sort_values('price_mean')
     ordering['order'] = range(1, ordering.shape[0]+1)
@@ -42,12 +43,13 @@ def encode(frame, feature):
 
 dfName='data_train.csv'
 df = pd.read_csv(dfName,header=0)
-df_train=df[['Complex_Level1','Complex_Level2','Complex_Level3','Complex_Level4','DesignDocErrNum','CodeModLineNum', 'HistoryTestDay', 'BugFatalNum','BugErrorNum']]
-df_target=df["OnlineBugNum"].values.reshape(len(df),1)
+#df_train=df[['Complex_Level1','Complex_Level2','Complex_Level3','Complex_Level4','DesignDocErrNum','CodeModLineNum', 'HistoryTestDay', 'BugFatalNum','BugErrorNum']]
+df_train=df[['ComplexLevel','DesignDocErrNum','CodeModLineNum', 'HistoryTestDay', 'BugFatalNum','BugErrorNum']]
+df_target=df[pridictAttri].values.reshape(len(df),1)
 # print(np.shape(df_train))
 # print(np.shape(df_target))
-print(df["OnlineBugNum"].describe())
-sns.distplot(df["OnlineBugNum"])
+print(df[pridictAttri].describe())
+sns.distplot(df[pridictAttri])
 plt.show()
 
 quantity = [attr for attr in df_train.columns if df_train.dtypes[attr] != 'object']  # 数值变量集合
@@ -90,7 +92,7 @@ def spearman(frame, features):
     '''
     spr = pd.DataFrame()
     spr['feature'] = features
-    spr['corr'] = [frame[f].corr(frame['Price'], 'spearman') for f in features]
+    spr['corr'] = [frame[f].corr(frame[pridictAttri], 'spearman') for f in features]
     spr = spr.sort_values('corr')
     plt.figure(figsize=(6, 0.25*len(features)))
     sns.barplot(data=spr, y='feature', x='corr', orient='h')
