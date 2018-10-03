@@ -2,9 +2,9 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 
-train = pd.read_csv('data_train.csv')  # 读取train数据
+train = pd.read_csv('data_train_2.csv')  # 读取train数据
 train_y = train.OnlineBugNum
-predictor_x = ['ComplexLevel', 'DesignDocErrNum', 'CodeModLineNum', 'HistoryTestDay', 'BugFatalNum','BugErrorNum']  # 特征
+predictor_x = ['Complex_Level1','Complex_Level2','Complex_Level3','Complex_Level4','DesignDocErrNum', 'CodeModLineNum', 'HistoryTestDay', 'BugFatalNum','BugErrorNum']  # 特征
 train_x = train[predictor_x]
 rf1=DecisionTreeRegressor()
 rf2=RandomForestRegressor(n_estimators=1000)           #一般来说n_estimators越大越好，运行结果呈现出的两种结果该值分别是10和1000rf3=ExtraTreesRegressor()
@@ -12,7 +12,7 @@ rf2=RandomForestRegressor(n_estimators=1000)           #一般来说n_estimators
 #my_model = RandomForestRegressor()  # 随机森林模型
 
 rf2.fit(train_x, train_y)  # fit
-test = pd.read_csv('data_test.csv')  # 读取test数据
+test = pd.read_csv('data_test_2.csv')  # 读取test数据
 test_x = test[predictor_x]
 test_y=test.OnlineBugNum
 pre_test_y_rf1 = rf1.fit(test_x,test_y).predict(test_x)
@@ -20,7 +20,7 @@ pre_test_y_rf2 = rf2.fit(test_x,test_y).predict(test_x)
 print(pre_test_y_rf1)
 
 my_submission = pd.DataFrame({'Predict_OnlineBugNum': pre_test_y_rf1,'Actual OnlineBugNum': test_y,'loss':pre_test_y_rf1-test_y})  # 建csv
-my_submission.to_csv('DecisionTree1.csv', index=False)
+my_submission.to_csv('DecisionTree2.csv', index=False)
 
 my_submission = pd.DataFrame({'Predict_OnlineBugNum': pre_test_y_rf2,'Actual OnlineBugNum': test_y,'loss':pre_test_y_rf2-test_y})  # 建csv
-my_submission.to_csv('RandomForest1.csv', index=False)
+my_submission.to_csv('RandomForest2.csv', index=False)
