@@ -1,0 +1,91 @@
+基于keras的迁移学习和微调 实践2
+
+#############################################################################################################
+迁移学习：在ImageNet上得到一个预训练好的ConvNet网络，删除网络顶部的全连接层，然后将ConvNet网络的剩余部分作为新数据集的特征提取层。
+这也就是说，我们使用了ImageNet提取到的图像特征，为新数据集训练分类器。
+
+微调：更换或者重新训练ConvNet网络顶部的分类器，还可以通过反向传播算法调整预训练网络的权重。
+
+该选择哪种方法？
+有两个主要因素，将影响到所选择的方法：
+
+1. 你的数据集大小；
+
+2. 新数据集与预训练数据集的相似性，通常与ImageNet数据集相比。
+
+新数据集相比于原数据集在样本量上更小，在内容上相似：
+      如果数据过小，考虑到过拟合，这使用微调则效果不大好。
+      因为新数据类似于原数据，我们希望网络中高级特征也与此数据集相关。
+      因此，最好的思路可能是在ConvNet网络上重新训练一个线性分类器。
+
+新数据集相比于原数据集在样本量上更小，且内容非常不同：
+     由于数据较小，只训练一个线性分类器可能更好。但是数据集不同，从网络顶部开始训练分类器不是最好的选择，
+     这里包含了原有数据集的高级特征。所以，一般是从ConvNet网络前部的激活函数开始，重新训练一个线性分类器。
+
+新数据集相比于原数据集在样本量上较大，在内容上相似：
+    由于我们有更多的数据，所以在我们试图微调整个网络，那我们有信心不会导致过拟合。
+
+新数据集相比于原数据集在样本量上较大，但内容非常不同：
+    由于数据集很大，可以尝试从头开始训练一个深度网络。然而，在实际应用中，用一个预训练模型的网络权重来初始化新网络的权重，仍然是不错的方法。
+    在这种情况下，我们有足够的数据和信心对整个网络进行微调。
+
+另外，在新数据集样本量较大时，也可以尝试从头开始训练一个网络。
+#############################################################################################################
+
+###数据准备
+###将使用Kaggle猫狗大赛中提供的数据集，将训练集目录和验证集目录设置如下：
+
+#train_dir/
+#  dog/
+#  cat/
+#val_dir/
+#  dog/
+#  cat/
+  
+  
+  ###数据增强，定义了旋转、移动、剪切、缩放和翻转操作的参数范围
+  train_datagen =  ImageDataGenerator(
+    preprocessing_function=preprocess_input,
+    rotation_range=30,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+test_datagen = ImageDataGenerator(
+    preprocessing_function=preprocess_input,
+    rotation_range=30,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True
+)
+train_generator = train_datagen.flow_from_directory(
+  args.train_dir,
+  target_size=(IM_WIDTH, IM_HEIGHT),
+  batch_size=batch_size,
+)
+validation_generator = test_datagen.flow_from_directory(
+  args.val_dir,
+  target_size=(IM_WIDTH, IM_HEIGHT),
+  batch_size=batch_size,
+)
+
+##从keras.applications模块中引出基础网络--InceptionV3网络
+#设置了标志位include_top = False，去除ImageNet网络的全连接层权重
+
+base_model = InceptionV3(weights='imagenet', include_top=False)
+
+#我们将添加一个新的全连接层，并进行初始化。
+#全局平均初始化函数GlobalAveragePooling2D将MxNxC张量转换后输出为1xC张量，其中C是图像的通道数。
+#然后我们添加一个维度为1024的全连接层Dense，同时加上一个softmax函数，得到[0,1]之间的输出值。
+def add_new_last_layer(base_model, nb_classes):
+  x = base_model.output
+  x = GlobalAveragePooling2D()(x)
+  x = Dense(FC_SIZE, activation='relu')(x) 
+  predictions = Dense(nb_classes, activation='softmax')(x) 
+  model = Model(input=base_model.input, output=predictions)
+  return model
+
